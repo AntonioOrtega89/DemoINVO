@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Generador de Factura – InvoSys</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- html2pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-light">
+
+  <!-- Protege la página: si no hay user en localStorage redirige -->
+  <script>
+    if (!localStorage.getItem('currentUserId')) {
+      window.location.href = 'login.html';
+    }
+  </script>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+    <div class="container">
+      <a class="navbar-brand" href="generacion_factura.html">
+        <i class="bi bi-inboxes-fill me-1"></i>InvoSys
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="generacion_factura.html">
+              <i class="bi bi-file-earmark-plus me-1"></i>Nueva Factura
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="invoices.html">
+              <i class="bi bi-receipt me-1"></i>Mis Facturas
+            </a>
+          </li>
+        </ul>
+        <button id="logoutBtn" class="btn btn-outline-danger">
+          <i class="bi bi-box-arrow-right me-1"></i>Salir
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- FORMULARIO CAPTURA DE FACTURA -->
+    <div id="form-container" class="card shadow-sm mb-4">
+      <div class="card-header"><h5 class="mb-0">Captura de Factura</h5></div>
+      <div class="card-body">
+        <form id="invoiceForm">
+          <!-- Datos Emisor -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="issuerName" class="form-label">Nombre Emisor</label>
+              <input type="text" id="issuerName" class="form-control" placeholder=" " required>
+            </div>
+            <div class="col-md-6">
+              <label for="issuerCIF" class="form-label">RFC Emisor</label>
+              <input type="text" id="issuerCIF" class="form-control" placeholder=" " required>
+            </div>
+            <div class="col-md-6">
+              <label for="issuerEmail" class="form-label">E-mail Emisor</label>
+              <input type="email" id="issuerEmail" class="form-control" placeholder=" " required>
+            </div>
+            <div class="col-md-6">
+              <label for="issuerPhone" class="form-label">Teléfono Emisor</label>
+              <input type="text" id="issuerPhone" class="form-control" placeholder=" ">
+            </div>
+            <div class="col-12">
+              <label for="issuerAddress" class="form-label">Dirección Emisor</label>
+              <textarea id="issuerAddress" class="form-control" rows="2" placeholder=" "></textarea>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Datos Cliente -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="clientName" class="form-label">Nombre Cliente</label>
+              <input type="text" id="clientName" class="form-control" placeholder=" " required>
+            </div>
+            <div class="col-md-6">
+              <label for="clientCIF" class="form-label">RFC Cliente</label>
+              <input type="text" id="clientCIF" class="form-control" placeholder=" " required>
+            </div>
+            <div class="col-12">
+              <label for="clientAddress" class="form-label">Dirección Cliente</label>
+              <textarea id="clientAddress" class="form-control" rows="2" placeholder=" " required></textarea>
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Info Factura -->
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label for="invoiceNumber" class="form-label">Factura Nº</label>
+              <input type="text" id="invoiceNumber" class="form-control" placeholder=" " required>
+            </div>
+            <div class="col-md-4">
+              <label for="invoiceDate" class="form-label">Fecha</label>
+              <input type="date" id="invoiceDate" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label for="dueDate" class="form-label">Vencimiento</label>
+              <input type="date" id="dueDate" class="form-control">
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Conceptos -->
+          <h6>Conceptos</h6>
+          <div id="items">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-5"><input type="text" class="form-control itemDesc" placeholder="Descripción" required></div>
+              <div class="col-md-1"><input type="number" class="form-control itemQty" value="1" min="1" required></div>
+              <div class="col-md-2"><input type="text" class="form-control itemUnit" value="pieza"></div>
+              <div class="col-md-2"><input type="number" class="form-control itemPrice" value="0.00" step="0.01" required></div>
+              <div class="col-md-1"><input type="number" class="form-control itemVAT" value="16" step="0.01"></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between mt-3">
+            <button type="button" id="addItemBtn" class="btn btn-outline-secondary">
+              <i class="bi bi-plus-circle me-1"></i>Añadir concepto
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-file-earmark-text me-1"></i>Generar factura
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- VISTA DE FACTURA -->
+    <div id="invoice" class="card shadow-sm mb-4" style="display:none;">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <img src="data:image/png;base64,..." alt="Logo InvoSys" style="max-height:60px">
+          <div id="inv-issuerDetails" class="text-end"></div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-6" id="inv-clientDetails"></div>
+          <div class="col-md-6 text-end" id="inv-invoiceInfo"></div>
+        </div>
+        <table class="table table-bordered mb-3">
+          <thead class="table-light">
+            <tr><th>Descripción</th><th class="text-center">Cant.</th><th class="text-center">Unidad</th><th class="text-end">Precio</th><th class="text-center">IVA</th><th class="text-end">Importe</th></tr>
+          </thead>
+          <tbody id="inv-itemsBody"></tbody>
+        </table>
+        <div class="row justify-content-end">
+          <div class="col-md-4">
+            <div class="d-flex justify-content-between"><span>Subtotal:</span><strong id="inv-subtotal"></strong></div>
+            <div class="d-flex justify-content-between"><span>IVA:</span><strong id="inv-iva"></strong></div>
+            <div class="d-flex justify-content-between border-top pt-2"><span>Total:</span><strong id="inv-total"></strong></div>
+          </div>
+        </div>
+        <div class="text-end mt-3">
+          <button id="btnDownload" class="btn btn-success">
+            <i class="bi bi-download me-1"></i>Descargar PDF
+          </button>
+          <a href="invoices.html" class="btn btn-secondary ms-2">
+            <i class="bi bi-receipt me-1"></i>Mis Facturas
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Referencias DOM
+    const logoutBtn    = document.getElementById('logoutBtn');
+    const addItemBtn   = document.getElementById('addItemBtn');
+    const invoiceForm  = document.getElementById('invoiceForm');
+    const formContainer= document.getElementById('form-container');
+    const invoiceDiv   = document.getElementById('invoice');
+    const invIssuer    = document.getElementById('inv-issuerDetails');
+    const invClient    = document.getElementById('inv-clientDetails');
+    const invInfo      = document.getElementById('inv-invoiceInfo');
+    const invItemsBody = document.getElementById('inv-itemsBody');
+    const invSubtotal  = document.getElementById('inv-subtotal');
+    const invIva       = document.getElementById('inv-iva');
+    const invTotal     = document.getElementById('inv-total');
+    const btnDownload  = document.getElementById('btnDownload');
+
+    // Cerrar sesión
+    logoutBtn.onclick = () => {
+      localStorage.removeItem('currentUserId');
+      window.location.href = 'login.html';
+    };
+
+    // Añadir nueva fila de concepto
+    addItemBtn.onclick = () => {
+      const row = document.createElement('div');
+      row.className = 'row g-3 align-items-end mt-2';
+      row.innerHTML = `
+        <div class="col-md-5"><input type="text" class="form-control itemDesc" required></div>
+        <div class="col-md-1"><input type="number" class="form-control itemQty" value="1" min="1" required></div>
+        <div class="col-md-2"><input type="text" class="form-control itemUnit" value="pieza"></div>
+        <div class="col-md-2"><input type="number" class="form-control itemPrice" value="0.00" step="0.01" required></div>
+        <div class="col-md-1"><input type="number" class="form-control itemVAT" value="16" step="0.01"></div>
+      `;
+      document.getElementById('items').appendChild(row);
+    };
+
+    // Generar factura
+    invoiceForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      invItemsBody.innerHTML = '';
+
+      // Datos emisor
+      const iName    = document.getElementById('issuerName').value;
+      const iCIF     = document.getElementById('issuerCIF').value;
+      const iMail    = document.getElementById('issuerEmail').value;
+      const iTel     = document.getElementById('issuerPhone').value;
+      const iAddr    = document.getElementById('issuerAddress').value.replace(/\n/g,'<br>');
+      invIssuer.innerHTML = `<strong>${iName}</strong><br>RFC: ${iCIF}<br>${iMail}<br>${iTel}<br>${iAddr}`;
+
+      // Datos cliente
+      const cName    = document.getElementById('clientName').value;
+      const cCIF     = document.getElementById('clientCIF').value;
+      const cAddr    = document.getElementById('clientAddress').value.replace(/\n/g,'<br>');
+      invClient.innerHTML = `<strong>Factura a:</strong><br>${cName}<br>RFC: ${cCIF}<br>${cAddr}`;
+
+      // Info factura
+      invInfo.innerHTML = `
+        <strong>Nº:</strong> ${document.getElementById('invoiceNumber').value}<br>
+        <strong>Fecha:</strong> ${document.getElementById('invoiceDate').value}<br>
+        <strong>Vto:</strong> ${document.getElementById('dueDate').value}
+      `;
+
+      // Conceptos y totales
+      const descEls  = document.getElementsByClassName('itemDesc');
+      const qtyEls   = document.getElementsByClassName('itemQty');
+      const unitEls  = document.getElementsByClassName('itemUnit');
+      const priceEls = document.getElementsByClassName('itemPrice');
+      const vatEls   = document.getElementsByClassName('itemVAT');
+      let subtotal = 0, ivaAmt = 0;
+      const items   = [];
+
+      for (let i = 0; i < descEls.length; i++) {
+        const desc = descEls[i].value;
+        const q    = +qtyEls[i].value;
+        const p    = +priceEls[i].value;
+        const vPct = +vatEls[i].value;
+        const v    = vPct / 100;
+        const base = q * p;
+        subtotal += base;
+        ivaAmt += base * v;
+        const imp = base * (1 + v);
+
+        invItemsBody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${desc}</td>
+            <td class="text-center">${q}</td>
+            <td class="text-center">${unitEls[i].value}</td>
+            <td class="text-end">${p.toFixed(2)}</td>
+            <td class="text-center">${vPct.toFixed(2)}%</td>
+            <td class="text-end">${imp.toFixed(2)}</td>
+          </tr>
+        `);
+
+        items.push({ description: desc, quantity: q, unit: unitEls[i].value, price: p, vat_percent: vPct, importe: +imp.toFixed(2) });
+      }
+
+      invSubtotal.textContent = `MXN $ ${subtotal.toFixed(2)}`;
+      invIva.textContent      = `MXN $ ${ivaAmt.toFixed(2)}`;
+      invTotal.textContent    = `MXN $ ${(subtotal + ivaAmt).toFixed(2)}`;
+
+      // Mostrar vista y ocultar form
+      formContainer.style.display = 'none';
+      invoiceDiv.style.display    = 'block';
+
+      // Payload JSON
+      const payload = {
+        user_id: +localStorage.getItem('currentUserId'),
+        invoice_number: document.getElementById('invoiceNumber').value,
+        invoice_date: document.getElementById('invoiceDate').value,
+        due_date: document.getElementById('dueDate').value,
+        issuer: { name:iName, rfc:iCIF, email:iMail, phone:iTel, address:document.getElementById('issuerAddress').value },
+        client: { name:cName, rfc:cCIF, address:document.getElementById('clientAddress').value },
+        subtotal: subtotal, iva: ivaAmt, total: subtotal + ivaAmt,
+        items: items
+      };
+
+      // Guardar en backend (no redirige)
+      try {
+        const res = await fetch('http://localhost:5000/api/invoices', {
+          method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(payload)
+        });
+        console.log('Factura guardada, status:', res.status);
+      } catch(err) {
+        console.error('Error guardando factura:', err);
+      }
+    });
+
+    // Descargar PDF
+    btnDownload.onclick = () => {
+      html2pdf().from(invoiceDiv).set({ margin:0.5, filename:`factura_${document.getElementById('invoiceNumber').value}.pdf` }).save();
+    };
+  </script>
+</body>
+</html>
